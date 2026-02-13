@@ -62,6 +62,41 @@ cloudflared tunnel --url http://localhost:8080
 ルーターの管理画面で外部ポート → `このPC:8080` に転送設定。
 ※ セキュリティリスクがあるため非推奨。
 
+## 常駐化（systemd サービス）
+
+PC起動時にカメラサーバーを自動起動させるには、systemd サービスとして登録します。
+
+```bash
+# インストール（サービス登録＋自動起動＋即時起動）
+./service.sh install
+
+# ステータス確認
+./service.sh status
+
+# アンインストール（停止＋自動起動解除）
+./service.sh uninstall
+```
+
+### 手動操作
+
+```bash
+# 停止 / 起動 / 再起動
+sudo systemctl stop camera-server
+sudo systemctl start camera-server
+sudo systemctl restart camera-server
+
+# ログ確認
+sudo journalctl -u camera-server -f
+```
+
+### 設定変更
+
+起動オプションを変更したい場合は `camera-server.service` の `ExecStart` 行を編集して再インストールしてください。
+
+```ini
+ExecStart=/home/katsuyuki/github/camera-server/.venv/bin/python app.py --device 0 --width 1920 --height 1080
+```
+
 ## API
 
 | エンドポイント | 説明 |

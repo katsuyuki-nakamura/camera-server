@@ -1,0 +1,25 @@
+[Unit]
+Description=カメラストリーミングサーバー
+After=network.target
+
+[Service]
+Type=simple
+User=katsuyuki
+Group=katsuyuki
+WorkingDirectory=/home/katsuyuki/github/camera-server
+ExecStart=/home/katsuyuki/github/camera-server/.venv/bin/python app.py --device 1
+Restart=always
+RestartSec=5
+Environment=CAMERA_USER=katsuyuki
+Environment=CAMERA_PASS=wnct3594
+
+# カメラデバイスへのアクセスを許可
+SupplementaryGroups=video
+
+# ログ出力
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=camera-server
+
+[Install]
+WantedBy=multi-user.target
