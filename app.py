@@ -167,10 +167,10 @@ def main():
                         help="バインドアドレス (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080,
                         help="ポート番号 (default: 8080)")
-    parser.add_argument("--username", default=os.environ.get("CAMERA_USER", "admin"),
-                        help="認証ユーザー名 (default: admin, env: CAMERA_USER)")
-    parser.add_argument("--password", default=os.environ.get("CAMERA_PASS", ""),
-                        help="認証パスワード (未指定時は自動生成, env: CAMERA_PASS)")
+    parser.add_argument("--username", default=os.environ.get("CAMERA_USER", "katsuyuki"),
+                        help="認証ユーザー名 (default: katsuyuki, env: CAMERA_USER)")
+    parser.add_argument("--password", default=os.environ.get("CAMERA_PASS", "wnct3594"),
+                        help="認証パスワード (default: wnct3594, env: CAMERA_PASS)")
     args = parser.parse_args()
 
     # 認証設定
