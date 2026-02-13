@@ -106,6 +106,70 @@
             color: #888;
         }
 
+        /* 設定パネル */
+        .settings-panel {
+            width: 100%;
+            margin-top: 20px;
+            background: #16213e;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,.3);
+        }
+        .settings-header {
+            padding: 10px 16px;
+            background: #0f3460;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+        .settings-header:hover { background: #1a4a8a; }
+        .settings-header h2 { font-size: 1rem; font-weight: 500; }
+        .settings-body {
+            display: none;
+            padding: 16px;
+        }
+        .settings-body.open { display: block; }
+        .ctrl-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .ctrl-group label {
+            width: 160px;
+            font-size: .85rem;
+            flex-shrink: 0;
+        }
+        .ctrl-group input[type="range"] {
+            flex: 1;
+            min-width: 120px;
+            accent-color: #1a4a8a;
+        }
+        .ctrl-group select {
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #1a4a8a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: .85rem;
+        }
+        .ctrl-value {
+            width: 50px;
+            text-align: right;
+            font-size: .8rem;
+            color: #aaa;
+            font-variant-numeric: tabular-nums;
+        }
+        .settings-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+        }
+        .settings-actions button { font-size: .8rem; padding: 6px 14px; }
+
         footer {
             padding: 12px;
             font-size: .75rem;
@@ -135,6 +199,20 @@
         </div>
 
         <div class="info" id="info"></div>
+
+        <!-- カメラ設定パネル -->
+        <div class="settings-panel">
+            <div class="settings-header" onclick="toggleSettings()">
+                <h2>⚙️ カメラ設定</h2>
+                <span id="settingsArrow">▶</span>
+            </div>
+            <div class="settings-body" id="settingsBody">
+                <div id="controlsContainer"></div>
+                <div class="settings-actions">
+                    <button onclick="resetControls()">↩ デフォルトに戻す</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer>Camera Streaming Server &mdash; Logitech Brio 100</footer>
@@ -183,6 +261,99 @@
         }
         fetchStatus();
         setInterval(fetchStatus, 10000);
+
+        // ─── カメラ設定 ────────────────────────────────────────────────────────────
+
+        function toggleSettings() {
+            const body = document.getElementById("settingsBody");
+            const arrow = document.getElementById("settingsArrow");
+            body.classList.toggle("open");
+            arrow.textContent = body.classList.contains("open") ? "▼" : "▶";
+            if (body.classList.contains("open")) loadControls();
+        }
+
+        async function loadControls() {
+            const container = document.getElementById("controlsContainer");
+            try {
+                const r = await fetch("/api/controls");
+                const controls = await r.json();
+                container.innerHTML = "";
+                for (const [name, meta] of Object.entries(controls)) {
+                    const div = document.createElement("div");
+                    div.className = "ctrl-group";
+
+                    const label = document.createElement("label");
+                    label.textContent = meta.label;
+                    div.appendChild(label);
+
+                    if (meta.type === "menu" && meta.options) {
+                        const sel = document.createElement("select");
+                        sel.dataset.ctrl = name;
+                        for (const [val, text] of Object.entries(meta.options)) {
+                            const opt = document.createElement("option");
+                            opt.value = val;
+                            opt.textContent = text;
+                            if (parseInt(val) === meta.value) opt.selected = true;
+                            sel.appendChild(opt);
+                        }
+                        sel.addEventListener("change", () => setControl(name, parseInt(sel.value)));
+                        div.appendChild(sel);
+                    } else if (meta.type === "bool") {
+                        const sel = document.createElement("select");
+                        sel.dataset.ctrl = name;
+                        [{v:1,t:"ON"},{v:0,t:"OFF"}].forEach(o => {
+                            const opt = document.createElement("option");
+                            opt.value = o.v; opt.textContent = o.t;
+                            if (o.v === meta.value) opt.selected = true;
+                            sel.appendChild(opt);
+                        });
+                        sel.addEventListener("change", () => setControl(name, parseInt(sel.value)));
+                        div.appendChild(sel);
+                    } else {
+                        const range = document.createElement("input");
+                        range.type = "range";
+                        range.min = meta.min;
+                        range.max = meta.max;
+                        range.step = meta.step;
+                        range.value = meta.value ?? meta.default;
+                        range.dataset.ctrl = name;
+
+                        const valSpan = document.createElement("span");
+                        valSpan.className = "ctrl-value";
+                        valSpan.textContent = range.value;
+
+                        let debounce = null;
+                        range.addEventListener("input", () => {
+                            valSpan.textContent = range.value;
+                            clearTimeout(debounce);
+                            debounce = setTimeout(() => setControl(name, parseInt(range.value)), 200);
+                        });
+                        div.appendChild(range);
+                        div.appendChild(valSpan);
+                    }
+                    container.appendChild(div);
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="color:#e94560">設定の読み込みに失敗しました</p>';
+            }
+        }
+
+        async function setControl(name, value) {
+            try {
+                await fetch("/api/controls", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({[name]: value}),
+                });
+            } catch { /* ignore */ }
+        }
+
+        async function resetControls() {
+            try {
+                await fetch("/api/controls/reset", { method: "POST" });
+                loadControls();
+            } catch { /* ignore */ }
+        }
     </script>
 </body>
 </html>
