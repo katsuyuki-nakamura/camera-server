@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カメラモニター</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background: #16213e;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,.4);
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .85rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #0f3460;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #e94560;
+        }
+        .status-dot.live { background: #00c853; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,.5);
+            width: 100%;
+        }
+
+        .video-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #1a4a8a;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: background .2s;
+        }
+        button:hover { background: #1a4a8a; }
+
+        .info {
+            margin-top: 12px;
+            font-size: .8rem;
+            color: #888;
+        }
+
+        footer {
+            padding: 12px;
+            font-size: .75rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>&#128247; カメラモニター</h1>
+        <span class="status-badge">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">接続中...</span>
+        </span>
+    </header>
+
+    <main>
+        <div class="video-container">
+            <img id="stream" src="/video_feed" alt="カメラ映像"
+                 onerror="onStreamError()" onload="onStreamOk()">
+        </div>
+
+        <div class="controls">
+            <button onclick="takeSnapshot()">&#128248; スナップショット保存</button>
+            <button onclick="toggleFullscreen()">&#9974; フルスクリーン</button>
+            <button onclick="location.reload()">&#128260; 再接続</button>
+        </div>
+
+        <div class="info" id="info"></div>
+    </main>
+
+    <footer>Camera Streaming Server &mdash; Logitech Brio 100</footer>
+
+    <script>
+        const streamImg   = document.getElementById("stream");
+        const statusDot   = document.getElementById("statusDot");
+        const statusText  = document.getElementById("statusText");
+        const info        = document.getElementById("info");
+
+        function onStreamOk() {
+            statusDot.classList.add("live");
+            statusText.textContent = "LIVE";
+        }
+
+        function onStreamError() {
+            statusDot.classList.remove("live");
+            statusText.textContent = "オフライン";
+            // 5 秒後に再接続
+            setTimeout(() => { streamImg.src = "/video_feed?" + Date.now(); }, 5000);
+        }
+
+        function takeSnapshot() {
+            const a = document.createElement("a");
+            a.href = "/snapshot";
+            a.download = "snapshot_" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
+            a.click();
+        }
+
+        function toggleFullscreen() {
+            const vc = document.querySelector(".video-container");
+            if (!document.fullscreenElement) {
+                vc.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ステータス取得
+        async function fetchStatus() {
+            try {
+                const r = await fetch("/api/status");
+                const d = await r.json();
+                info.textContent = `${d.resolution} @ ${d.fps}fps ─ /dev/video${d.camera}`;
+            } catch { /* ignore */ }
+        }
+        fetchStatus();
+        setInterval(fetchStatus, 10000);
+    </script>
+</body>
+</html>
