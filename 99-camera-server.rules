@@ -1,0 +1,4 @@
+# Logitech Brio 100 — キャプチャデバイス (index 0) のみシンボリックリンクを作成
+# インストール: sudo cp 99-camera-server.rules /etc/udev/rules.d/
+# 反映:         sudo udevadm control --reload-rules && sudo udevadm trigger
+SUBSYSTEM=="video4linux", ATTR{index}=="0", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="094c", SYMLINK+="camera-brio", TAG+="systemd"
